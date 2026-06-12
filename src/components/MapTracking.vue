@@ -14,6 +14,9 @@ let simulationInterval: ReturnType<typeof setInterval> | null = null;
 const customerLatLng: [number, number] = [41.0240, 29.0153];
 const customerMarker = ref<L.Marker | null>(null);
 
+const isDelivered = ref<boolean>(false);
+const showModal = ref<boolean>(false);
+
 // Ekranda göstereceğimiz anlık bilgiler
 const remainingDistance = ref<string>("Hesaplanıyor...");
 const remainingTime = ref<string>("Hesaplanıyor...");
@@ -144,7 +147,23 @@ if (map.value) {
       remainingTime.value = `${timeInMinutes} dakika`;
     }
     // --- CANLI HESAPLAMA BİTTİ ---
-
+if (timeInMinutes <= 0) {
+  remainingTime.value = "Kurye kapıda! 🛵";
+  
+  // EĞER KURYENİN ROTASI BİTTİYSE VE EVE ULAŞTIYSA:
+  if (!isDelivered.value) {
+    isDelivered.value = true;
+    showModal.value = true; // Modalı aç
+    
+    // Simülasyonu otomatik olarak durdur
+    if (isSimulating.value) {
+      toggleSimulation(); 
+    }
+  }
+} else {
+  // Eğer kurye henüz varmadıysa veya simülasyon başa döndüyse durumları sıfırla
+  isDelivered.value = false;
+}
     map.value.panTo(newLatLng, { animate: true, duration: 1 });
   });
 
@@ -211,6 +230,14 @@ onBeforeUnmount(() => {
       </div>
     </div>
     <div id="map"></div>
+    <div v-if="showModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="success-icon">🎉</div>
+        <h2>Sipariş Teslim Edildi!</h2>
+        <p>Kuryemiz paketini güvenle teslim etti. Afiyet olsun!</p>
+        <button @click="showModal = false" class="close-btn">Harika, Kapat</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -286,4 +313,77 @@ onBeforeUnmount(() => {
   background: transparent !important;
   border: none !important;
 }
+
+/* Mevcut stillerinizin en altına ekleyin */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.6); /* Arka planı bulanıklaştırma efekti */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* Haritanın da üstünde durması için */
+}
+
+.modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 400px;
+  width: 90%;
+  animation: popIn 0.3s ease-out; /* Açılış animasyonu */
+}
+
+.success-icon {
+  font-size: 50px;
+  margin-bottom: 15px;
+}
+
+.modal-content h2 {
+  color: #0f172a;
+  margin-bottom: 10px;
+  font-size: 22px;
+}
+
+.modal-content p {
+  color: #64748b;
+  font-size: 15px;
+  margin-bottom: 20px;
+}
+
+.close-btn {
+  background-color: #10b981;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+}
+
+.close-btn:hover {
+  background-color: #059669;
+}
+
+/* Küçük bir pop-in animasyonu */
+@keyframes popIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 </style>
